@@ -1,30 +1,21 @@
 #!/usr/bin/env ruby
 # encoding: utf-8
 
-require "bunny"
+require_relative "rmq_connection"
 
-if ARGV.empty?
-  abort "Usage: #{$0} [binding key]"
-end
+rmq = RmqConnection.new("task_queue")
 
-conn = Bunny.new :host => 'rabbitmq'
-conn.start
+rmq.channel.prefetch(1)
 
-ch  = conn.create_channel
-x   = ch.topic("topic_logs")
-q   = ch.queue("", :exclusive => true)
-
-ARGV.each do |severity|
-  q.bind(x, :routing_key => severity)
-end
-
-puts " [*] Waiting for logs. To exit press CTRL+C"
+puts " [*] Waiting for messages. To exit press CTRL+C"
 
 begin
-  q.subscribe(:block => true) do |delivery_info, properties, body|
-    puts " [x] #{delivery_info.routing_key}:#{body}"
+  rmq.queue.subscribe(:manual_ack => true, :block => true) do |delivery_info, properties, body|
+    puts " [x] Received '#{body}'"
+    # imitate some work
+    puts " [x] Done"
+    rmq.channel.ack(delivery_info.delivery_tag)
   end
 rescue Interrupt => _
-  ch.close
-  conn.close
+  rmq.close
 end

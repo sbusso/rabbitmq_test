@@ -1,17 +1,14 @@
 #!/usr/bin/env ruby
 # encoding: utf-8
 
-require "bunny"
+require_relative "rmq_connection"
 
-conn = Bunny.new :host => 'rabbitmq'
-conn.start
+rmq = RmqConnection.new "task_queue"
 
-ch       = conn.create_channel
-x        = ch.topic("topic_logs")
-severity = ARGV.shift || "anonymous.info"
-msg      = ARGV.empty? ? "Hello World!" : ARGV.join(" ")
+1.upto(20).each do |i|
+  msg  = ARGV.empty? ? "Hello World! #{i}" : ARGV.join(" ")
 
-x.publish(msg, :routing_key => severity)
-puts " [x] Sent #{severity}:#{msg}"
-
-conn.close
+  rmq.queue.publish(msg, :persistent => true)
+  puts " [x] Sent #{msg}"
+end
+rmq.close

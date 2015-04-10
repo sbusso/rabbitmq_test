@@ -3,12 +3,10 @@ rabbitmq:
   ports:
     - "5672"
 
-web:
+runner:
   build: .
   command: bundle exec ruby rabbitmq_test.rb
   volumes:
     - .:/myapp
-  ports:
-    - "3000:3000"
   links:
     - rabbitmq
